@@ -7,7 +7,6 @@
 #include <sstream>
 #include <iomanip>
 #include <math.h>
-#include <emscripten.h>
 
 using namespace std;
 vector<string> UnKnowns;
@@ -270,69 +269,6 @@ class Utility
         }
     }
 };
-extern "C"
-{
-    EMSCRIPTEN_KEEPALIVE
-    void PassEquations(char *Eqn)
-    {
-        //this function is written in c++ to take the equations as string then parse each equation 
-        //and get the solution for the system of linear equations
-        string Eqnx(Eqn); //first we convert the passed argument from char * to std::string
-        vector<string> EquationText; // declare the vector which we will add the equations to it
-        //after splitting the string using the ";" character which separates between the equations
-        while (true)
-        {
-            int SeparatorIndex = Eqnx.find(";"); //get the index of the first ";" character
-            if (SeparatorIndex != -1) //if the index isn't equal to -1 which means we found the ";" character
-            {
-                EquationText.push_back(Eqnx.substr(0, SeparatorIndex)); //then add to the vector the equation 
-                //by taking the substring of Eqnx from 0 to separator index 
-                Eqnx = Eqnx.substr(SeparatorIndex + 1); // add the rest of the string to same variable 
-                //to work on it again to get the next equation
-            }
-            else
-                break; //then if the index is equal to -1 we will break 
-                //as this means that we already added all the equations in the string to our vector
-        }
-        for (int i = 0; i < EquationText.size(); i++) //then we will iterate on each equation
-        {
-            Equations.push_back(Equation(EquationText[i]));//create instance from the equation class and pass to it 
-            //the equation string then add the object to Equations vector
-        }
-        Utility::DisplayEquation();//then we will call this function to display the equations on the console log
-        Utility::SetMatrix();//call this function to form our Coefficient matrix
-        float CoefMatrixDet = Utility::CalculateDeterminant(CoeffsMatrix);//then get the determinant of this 
-        //Coeffiecient matrix using the CalculateDeterminant function
-        vector<float> VariableDeterminant;//declare the vector where we will store the determinants of the variable matrices
-        for (int i = 0; i < UnKnowns.size(); i++)
-        {
-            //we will iterate on each unknown to get its variable matrix and calculate its determinant
-            VariableDeterminant.push_back(Utility::CalculateDeterminant(Utility::GetVariableMatrix(i, CoeffsMatrix, RHSMatrix)));
-            //we will add to the vector the determinant of the return value of the function GetVariableMatrix 
-            //which takes the order of the unknown , the coefficient matrix, right hand side matrix and returns 
-            //the variable matrix for each unknown
-        }
-        string ResultsStr ="";//declare the string where we will store the results and pass it to the JavaScript function
-        for (int j = 0; j < VariableDeterminant.size(); j++)
-        {
-            cout << endl
-                 << endl;
-            cout << UnKnowns[j] << " = " << VariableDeterminant[j] / CoefMatrixDet;
-            cout << endl
-                 << endl;
-            //we will iterate on each value in the vector which contains the determinant 
-            //of the variable matrix for each unknown
-            int r = (int)(VariableDeterminant[j] / CoefMatrixDet);//convert the value of determinant from float to int
-            ResultsStr += UnKnowns[j] + " = " + to_string(r) + ";";//form the string which contains the result
-        }
-        string script = "SolutionPanel('" + ResultsStr + "')";//this is the JavaScript script that calls the SolutionPanel
-        //function and pass to it the string which contains results
-        const char *s = script.c_str(); //convert this string which contains the script to char * as this is the expected
-        //type of the argument for the emscripten_run_script function
-        emscripten_run_script(s);//Call the function which execute our script
-    }
-}
-EMSCRIPTEN_KEEPALIVE
 int main(int argc, char const *argv[])
 {
     int Count = atoi(argv[1]);
